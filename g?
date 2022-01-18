@@ -36,4 +36,361 @@ class SearchEngine:
             if len(results) == 10:
                 break
         return results
+Skip to content
+Keerthivasan13
+/
+CSCI572-Information_Retrieval_And_Web_Search_Engines
+Public
+Code
+Issues
+Pull requests
+Actions
+Projects
+Wiki
+Security
+Insights
+Comparing Bing and Google Search Results
+Comparing Bing and Google Search Results
+ master
+Keerthivasan13 authored and Keerthivasan13 committed on May 19, 2020
+1 parent 354c992 commit 9e8d5663ceded737a8e2796242e4ed4b6ccb2351
+Showing  with 1,511 additions and 0 deletions.
+ 1  Comparing Bing and Google Results/BingResults.txt 
+@@ -0,0 +1 @@
+From the statistics, we can observe that there is 32 % of overlap between the results from Google(Reference) and Bing. Even though overlaps are present, the correlation(rho) of the overlapping result rankings from the two Search Engines is not positive. The average value of Spearman's coeffiecient is -6.67 and we can conclude that its likely that Bing's rankings will have a different order than that of Google's but Bing will fetch relevant results for 32% of the time.
+ 105  Comparing Bing and Google Results/Comparator.py 
+@@ -0,0 +1,105 @@
+from bs4 import BeautifulSoup
+from time import sleep as sleeptime
+import requests
+import json
+import csv
+from random import randint
+from html.parser import HTMLParser
+
+USER_AGENT = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36'}
+
+
+class SearchEngine:
+    @staticmethod
+    def search(query, sleep=True):
+        if sleep:  # Prevents loading too many pages too soon
+            sleeptime(randint(7, 20))
+        temp_url = '+'.join(query.split())  # for adding + between words for the query
+        url = 'http://www.bing.com/search?q=' + temp_url + "&count=30"
+        soup = BeautifulSoup(requests.get(url, headers=USER_AGENT).text, "html.parser")
+        new_results = SearchEngine.scrape_search_result(soup)
+        return new_results
+
+    @staticmethod
+    def scrape_search_result(soup):
+        raw_results = soup.find_all("li", attrs={"class": "b_algo"})
+        results = []
+        seen_links = set()
+        # implement a check to get only 10 results and also check that URLs must not be duplicated
+        for result in raw_results:
+            link = result.find('a').get('href')
+            if link not in seen_links:
+                results.append(link)
+                seen_links.add(link)
+            if len(results) == 10:
+                break
+        return results
+
+
+class Crawler:
+    def __main__(self):
+        queries = []
+        with open("QuerySet.txt", "r") as file:
+            for query in file:
+                queries.append(query.rstrip("? \n"))
+
+        main_results = {}
+        for f, query in enumerate(queries):
+            main_results[query] = SearchEngine.search(query, True)
+            print(f)
+            print(len(main_results[query]))
+
+        with open("hw1.json", "w") as file:
+            json.dump(main_results, file, indent=4)
+
+        query_stats = []
+
+        with open("GoogleRef.txt", "r") as file:
+            ref_results = json.load(file)
+
+        total_overlaps, total_percent, total_rho = 0, 0, 0
+        for idx, query in enumerate(queries):
+            main_links = main_results[query]
+            ref_links = ref_results[query]
+
+            main_links_map = {}
+            for pos, val in enumerate(main_links):
+                val = self.trimUrl(val)
+                main_links_map[val] = pos
+
+            overlaps, sum = 0, 0
+            overlap_match = False
+            for pos, val in enumerate(ref_links):
+                val = self.trimUrl(val)
+                if val in main_links_map:
+                    overlaps += 1
+                    sum += ((pos - main_links_map[val]) ** 2)
+                    if pos == main_links_map[val]:
+                        overlap_match = True
+                    else:
+                        overlap_match = False
+
+            if overlaps == 0:
+                rho = 0
+            elif overlaps == 1:
+                rho = 1 if overlap_match else 0
+            else:
+                rho = 1 - ((6 * sum) / (overlaps * (overlaps ** 2 - 1)))
+
+            query_stats.append(["Query"+str(idx+1), overlaps, overlaps/len(ref_links), rho])
+            total_overlaps += overlaps
+            total_percent += overlaps/len(ref_links)
+            total_rho += rho
+
+        with open("hw1.csv", "w", newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(["Queries", "No of Overlapping Results", "Percent Overlap", "Spearman Coefficient"])
+            writer.writerows(query_stats)
+            writer.writerow(["Averages", total_overlaps/len(queries), total_percent/len(queries), total_rho/len(queries)])
+
+    def trimUrl(self, link):
+        return link.lower().rstrip(" /").replace("www.", "").replace("https://", "").replace("http://", "")
+
+robot = Crawler()
+robot.__main__() 
+ 1  Comparing Bing and Google Results/Conclusion.txt 
+@@ -0,0 +1 @@
+From the statistics, we can observe that there is 32 % of overlap between the results from Google(Reference) and Bing. Even though overlaps are present, the correlation(rho) of the overlapping result rankings from the two Search Engines is not positive. The average value of Spearman's coeffiecient is -6.67 and we can conclude that its likely that Bing's rankings will have a different order than that of Google's but Bing will fetch relevant results for 32% of the time.
+ 1,202  Comparing Bing and Google Results/GoogleResults.txt 
+Large diffs are not rendered by default.
+
+ 100  Comparing Bing and Google Results/QuerySet.txt 
+@@ -0,0 +1,100 @@
+How do you replace coolant thermostat ?
+How is library science vand information science related ?
+Which phase is the non dividing stage ?
+How much has michael vick worth after release from prison ?
+How can you get rid of dog fleas ?
+This is the third largest oceans ?
+What is kristen steawerts brothers name ?
+What type of relief is the coastal plains ?
+What do the word anteroposterior means ?
+Does selena gomez have verizon wireless for her cell phone ?
+What is winston churchills big achievements ?
+What is the value of a 1988 barbie collectible ?
+Who does sleaner gomez love ?
+How many books selling online ?
+How much anderson shelters cost in ww2 ?
+What is an exzmple of soliloquy ?
+Who invented first electirc stove and when ?
+What kind of cells make electricity from light ?
+Advantages and disadvantages of a bank ?
+What is the difference between an electrician and an electrical engineer ?
+What is the sequence to obtain a DNA fingerprint ?
+Where is nadia comasneci 's academy the perfect ten ?
+One pound of confectioners sugar equals how many ounces ?
+What skills are needed to become a surgeon to be successful ?
+How much does a 1996 chevy lumina weigh ?
+The precipitaion of a cougar ?
+What are the Functions of proteins to the body ?
+How much did the vietnam war cost per day ?
+Largest living life on earth ?
+The twinkling of stars is caused by ?
+What kind of music is listened toin costa rica ?
+Width of a football field in yards ?
+What is revolution of the sun ?
+How do snakes adapt to there enviornment ?
+Lil wayne 's favorite type of movie ?
+Where to get legendary pokemon on tppcrpg ?
+What is moon jelly a radial or bilateral ?
+Does she love corbin blu ?
+What is grammatical cohesion ?
+What family does a lizard come from ?
+How much do event planners make yearly ?
+What did the person that invented the first motor bike look like ?
+What are some cloven hooved animals ?
+1963 five dollar bill with red serial numbers ?
+How do you get rid of acene fast ?
+What is a moderately slow oven ?
+Are Lea and cory dating ?
+What are some commensasm relationships ?
+Where are the Black Hills located ?
+What caused worldwide economic crisis ?
+Where does a snowstorm less likely happen ?
+Class action lawsuit ?
+Stratified random sampling ?
+Number of quarters in a roll ?
+Who was in spains first government ?
+What si social darwinism ?
+Persecution of the christian church ?
+Where does saltwater sponges live ?
+The photic zone has an maximum depth of ?
+Blue and pink make what ?
+What are the various irrigation practices in the villages ?
+How do you care for newborn pitbull pups ?
+10 common defects characteristics in timber ?
+What are chinas important landmarks ?
+What are utahs four largest cities ?
+What are two powers that the legislative branch has ?
+Branches on every division of philosophy ?
+What do the people in lebanon speak ?
+What is the reason for the novel The Da Vinci Code ?
+How many millimeter in one liter ?
+What language do people speak in Angola ?
+How can you delete your millsberry ?
+Would be a key to preventing future genocide ?
+How many teaspoons in one half ounce liquid ?
+What are some cheerleading facts ?
+When is the coast guard day celebrated ?
+How far away it is from mercury ?
+Code for rip jaws in dna ?
+Worlds largest chicken ?
+What is the postal code of kentucky ?
+What creates a sandstorm ?
+How much does a pound of marijuana cost in the us ?
+How do you get the keys in sleuthhound ?
+Where is the largest bridgewho built itwhat kind of bridge is it ?
+Apakah kraf tangan yang dibuat pada kain songket ?
+Why does a carbonated drink become flat when left open ?
+Why sacrifice must environment to achieve development ?
+How many atoms are contained in eachmolecule of sulfuric acid ?
+Who is the most famous african american mathmatician ?
+What kind of cultures do chile have ?
+Gas was used for balloons long time ago ?
+Can someone infected with syphillis get symptoms a week later ?
+Can dogs eat pomegranite seeds ?
+Really interesting facts about hernando cortez ?
+What language ia used in greece ?
+Who is the most famous artist in guatemala ?
+What are some fun sex games ?
+How does an elephant attract its mate ?
+How many calories in cooked beef ?
+How many years do you need to go to college to be a cop ?
+ 102  Comparing Bing and Google Results/Statistics.csv 
+@@ -0,0 +1,102 @@
+Queries,No of Overlapping Results,Percent Overlap,Spearman Coefficient
+Query1,3,0.3,-8.5
+Query2,5,0.5,-1.75
+Query3,1,0.1,1
+Query4,3,0.3,-16.25
+Query5,4,0.4,-1.5
+Query6,2,0.2,-3.0
+Query7,2,0.2,-7.0
+Query8,1,0.1,0
+Query9,4,0.4,-0.5
+Query10,0,0.0,0
+Query11,5,0.5,0.5
+Query12,2,0.2,-24.0
+Query13,1,0.1,0
+Query14,2,0.2,-40.0
+Query15,2,0.2,-71.0
+Query16,6,0.6,0.08571428571428574
+Query17,5,0.5,0.09999999999999998
+Query18,1,0.1,0
+Query19,4,0.4,-4.1
+Query20,3,0.3,-1.75
+Query21,3,0.3,-21.25
+Query22,0,0.0,0
+Query23,2,0.2,-48.0
+Query24,7,0.7,0.1607142857142857
+Query25,3,0.3,-9.5
+Query26,2,0.2,-3.0
+Query27,4,0.4,-5.6
+Query28,3,0.3,-15.25
+Query29,2,0.2,-7.0
+Query30,1,0.1,0
+Query31,4,0.4,0.4
+Query32,6,0.6,-2.6285714285714286
+Query33,2,0.2,-1.0
+Query34,5,0.5,-2.15
+Query35,0,0.0,0
+Query36,1,0.1,0
+Query37,3,0.3,-3.5
+Query38,1,0.1,0
+Query39,5,0.5,-2.65
+Query40,3,0.3,-1.75
+Query41,6,0.6,-3.5142857142857142
+Query42,2,0.2,-7.0
+Query43,4,0.4,-7.9
+Query44,5,0.5,-1.2000000000000002
+Query45,3,0.3,-14.5
+Query46,5,0.5,-0.44999999999999996
+Query47,4,0.4,-2.5
+Query48,6,0.6,0.11428571428571432
+Query49,5,0.5,-4.4
+Query50,5,0.5,-3.4000000000000004
+Query51,2,0.2,-8.0
+Query52,5,0.5,-1.7999999999999998
+Query53,7,0.7,0.1607142857142857
+Query54,5,0.5,-1.7999999999999998
+Query55,3,0.3,-6.25
+Query56,5,0.5,0.35
+Query57,4,0.4,-5.6
+Query58,2,0.2,-79.0
+Query59,2,0.2,-3.0
+Query60,1,0.1,0
+Query61,2,0.2,-9.0
+Query62,4,0.4,-1.2000000000000002
+Query63,5,0.5,0.95
+Query64,5,0.5,-2.9
+Query65,5,0.5,-4.25
+Query66,2,0.2,-1.0
+Query67,5,0.5,-2.1
+Query68,5,0.5,-3.8499999999999996
+Query69,2,0.2,-49.0
+Query70,3,0.3,-8.5
+Query71,5,0.5,0.6
+Query72,0,0.0,0
+Query73,0,0.0,0
+Query74,2,0.2,-1.0
+Query75,5,0.5,0.44999999999999996
+Query76,6,0.6,-3.0857142857142854
+Query77,5,0.5,0.25
+Query78,1,0.1,0
+Query79,4,0.4,-9.2
+Query80,7,0.7,-0.6071428571428572
+Query81,4,0.4,-4.3
+Query82,3,0.3,1.0
+Query83,2,0.2,1.0
+Query84,1,0.1,0
+Query85,1,0.1,0
+Query86,3,0.3,-7.5
+Query87,1,0.1,0
+Query88,3,0.3,-12.25
+Query89,3,0.3,-1.0
+Query90,5,0.5,-0.10000000000000009
+Query91,0,0.0,0
+Query92,3,0.3,-17.5
+Query93,4,0.4,-5.1
+Query94,4,0.4,-6.9
+Query95,4,0.4,-2.1
+Query96,3,0.3,-5.25
+Query97,3,0.3,-17.5
+Query98,2,0.2,-16.0
+Query99,3,0.3,-11.25
+Query100,2,0.2,-19.0
+Averages,3.21,0.321,-6.672642857142858
+0 comments on commit 9e8d566
+
+Leave a comment
+ You’re not receiving notifications from this thread.
+© 2022 GitHub, Inc.
+Terms
+Privacy
+Security
+Status
+Docs
+Contact GitHub
+Pricing
+API
+Training
+Blog
+About
 
